@@ -1,0 +1,55 @@
+// Cloudflare configuration for EchoWave.
+// Replace every value marked REPLACE_ME (see README, steps 4-7).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "echowave",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-01",
+
+  // The React app (built into ./dist) is served as static files.
+  // /api/* and /.well-known/* go to the Worker first.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/.well-known/*"]
+  },
+
+  // Database (create with: npx wrangler d1 create echowave)
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "echowave",
+      "database_id": "REPLACE_ME",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Image storage (create with: npx wrangler r2 bucket create echowave-images)
+  "r2_buckets": [
+    { "binding": "IMAGES", "bucket_name": "echowave-images" }
+  ],
+
+  "vars": {
+    // Firebase project id (Firebase console > Project settings)
+    "FIREBASE_PROJECT_ID": "REPLACE_ME",
+    // Comma-separated Firebase user ids that can use /admin
+    "ADMIN_UIDS": "",
+    // Gemini model used for moderation, tagging and summaries
+    "GEMINI_MODEL": "gemini-flash-latest",
+    // How long a broadcast stays visible
+    "POST_TTL_HOURS": "48",
+    // A post is hidden automatically after this many reports
+    "REPORT_HIDE_THRESHOLD": "3",
+    // Android app (fill in after packaging with PWABuilder, README step 8)
+    "ANDROID_PACKAGE": "",
+    "ANDROID_SHA256": ""
+  },
+
+  // Cleanup of expired broadcasts every 6 hours
+  "triggers": { "crons": ["0 */6 * * *"] },
+
+  "observability": { "enabled": true }
+
+  // Secret (never put in this file): npx wrangler secret put GEMINI_API_KEY
+}

@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Colours checked for WCAG AA contrast in both themes.
+   Meaning is never shown by colour alone: sentiment, urgency and status always carry an icon + text label. */
+:root {
+  --bg: #f0f2f5;
+  --card: #ffffff;
+  --input: #f7f8fa;
+  --fg: #1d2030;
+  --muted: #535b6e;
+  --border: #dde1e8;
+  --primary: #3f51b5;
+  --primary-fg: #ffffff;
+  --accent: #ffa726;
+  --accent-fg: #1d2030;
+  --danger: #c62828;
+  --success: #1b7f3b;
+  --hero: #5c6bc0;
+}
+.dark {
+  --bg: #1c1e24;
+  --card: #262a33;
+  --input: #1f2229;
+  --fg: #e8eaf0;
+  --muted: #a3aabb;
+  --border: #363b48;
+  --primary: #949ef0;
+  --primary-fg: #12141a;
+  --accent: #f0ad4e;
+  --accent-fg: #1c1e24;
+  --danger: #ff8a80;
+  --success: #7ddc95;
+  --hero: #7b85d4;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-input: var(--input);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-hero: var(--hero);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+}
+
+html, body, #root { min-height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+@layer components {
+  .card { @apply rounded-xl border border-border bg-card shadow-sm; }
+  .btn-primary, .btn-secondary, .btn-ghost, .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary { @apply bg-accent text-accent-fg hover:brightness-105; }
+  .btn-secondary { @apply border border-border bg-input text-fg hover:bg-border/40; }
+  .btn-ghost { @apply px-2 text-muted hover:bg-border/40 hover:text-fg; }
+  .btn-danger { @apply bg-danger text-white hover:brightness-105 dark:text-[#1c1e24]; }
+  .field { @apply w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-fg placeholder:text-muted focus:border-primary focus:outline-none; }
+  .label { @apply mb-1.5 flex items-center gap-1.5 text-sm font-medium; }
+  .chip { @apply rounded-md bg-border/50 px-2 py-0.5 text-xs text-muted; }
+  .prose-page h1 { @apply mb-4 text-2xl font-bold text-primary; }
+  .prose-page h2 { @apply mt-6 mb-2 text-lg font-semibold; }
+  .prose-page p, .prose-page li { @apply mb-2 text-sm leading-relaxed text-fg/90; }
+  .prose-page ul { @apply ml-5 list-disc; }
+  .prose-page a { @apply text-primary underline; }
+}
+
+@keyframes ew-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+.ew-pulse { animation: ew-pulse 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .ew-pulse { animation: none; } }

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>EchoWave — what's happening near you</title>
+    <meta name="description" content="EchoWave: real-time local broadcasts from your community — traffic, weather, outages, deals and alerts, checked by AI for safety." />
+    <meta name="theme-color" content="#1c1e24" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta property="og:title" content="EchoWave" />
+    <meta property="og:description" content="Stay connected to your local wave." />
+    <meta property="og:image" content="/icons/og-image.png" />
+    <script>
+      // apply saved theme before first paint (avoids a white flash)
+      try {
+        var t = localStorage.getItem("ew-theme");
+        if (t === "light") document.documentElement.classList.remove("dark");
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
