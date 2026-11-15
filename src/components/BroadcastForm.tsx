@@ -6,12 +6,11 @@ import { useLocation } from "../lib/location";
 import { useToast } from "../lib/toast";
 import { compressImage } from "../lib/util";
 import { Link } from "../lib/router";
-import { sendEmailVerification } from "firebase/auth";
 
 const LIMIT = 280;
 
 export function BroadcastForm({ onPosted }: { onPosted: (p: Post) => void }) {
-  const { user, profile, refresh } = useAuth();
+  const { user } = useAuth();
   const loc = useLocation();
   const toast = useToast();
   const [content, setContent] = useState("");
@@ -36,7 +35,6 @@ export function BroadcastForm({ onPosted }: { onPosted: (p: Post) => void }) {
     );
   }
 
-  const needsVerify = profile && !profile.emailVerified;
 
   const pickImage = async (f: File | undefined) => {
     if (!f) return;
@@ -87,7 +85,6 @@ export function BroadcastForm({ onPosted }: { onPosted: (p: Post) => void }) {
       toast("success", "Broadcast sent!", r.post.urgent ? "Marked as an urgent alert." : undefined);
     } catch (err) {
       const e = err as ApiError;
-      if (e.code === "verify_email") await refresh();
       toast("error", e.code === "rejected" ? "Not posted" : "Couldn't broadcast", e.message);
     } finally {
       setBusy(false);
@@ -99,30 +96,6 @@ export function BroadcastForm({ onPosted }: { onPosted: (p: Post) => void }) {
   return (
     <section className="card p-5 sm:p-6">
       <h2 className="mb-4 text-lg font-semibold text-primary">Broadcast a Message</h2>
-
-      {needsVerify && (
-        <div className="mb-4 rounded-lg border border-accent/50 bg-accent/10 p-3 text-sm">
-          <p className="font-medium">Verify your email to start broadcasting.</p>
-          <p className="mt-1 text-muted">We sent a link to {user.email}. This keeps spam bots out.</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button className="btn-secondary py-1.5" type="button" onClick={async () => { await refresh(); }}>I've verified</button>
-            <button
-              className="btn-ghost py-1.5"
-              type="button"
-              onClick={async () => {
-                try {
-                  await sendEmailVerification(user);
-                  toast("success", "Verification email sent");
-                } catch {
-                  toast("error", "Please wait a minute before asking again.");
-                }
-              }}
-            >
-              Resend email
-            </button>
-          </div>
-        </div>
-      )}
 
       <form onSubmit={submit} className="space-y-4">
         <div>
@@ -180,7 +153,7 @@ export function BroadcastForm({ onPosted }: { onPosted: (p: Post) => void }) {
           </span>
         </label>
 
-        <button type="submit" className="btn-primary w-full py-2.5" disabled={busy || !!needsVerify || (!content.trim() && !image)}>
+        <button type="submit" className="btn-primary w-full py-2.5" disabled={busy || (!content.trim() && !image)}>
           <Icon name={busy ? "loader" : "send"} />
           {busy ? "Checking & sending…" : "Broadcast"}
         </button>

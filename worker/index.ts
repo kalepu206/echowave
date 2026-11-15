@@ -1,5 +1,5 @@
 import { Hono, type Context } from "hono";
-import { verifyFirebaseToken } from "./auth";
+import { endSession, finishGoogleLogin, readSession, startGoogleLogin } from "./auth";
 import { moderate, heuristicCheck, summarizeTrending, arrayBufferToBase64 } from "./ai";
 import type { AppEnv, Env, PostRow, UserRow } from "./types";
 import { SCHEMA } from "./schema";
@@ -134,19 +134,29 @@ api.use("*", async (c, next) => {
   await ensureSchema(c.env);
   c.set("auth", null);
   c.set("user", null);
-  const header = c.req.header("authorization");
-  if (header?.startsWith("Bearer ")) {
-    try {
-      const auth = await verifyFirebaseToken(header.slice(7), c.env.FIREBASE_PROJECT_ID);
-      c.set("auth", auth);
-      const user = await c.env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(auth.uid).first<UserRow>();
-      c.set("user", user ?? null);
-    } catch (e) {
-      console.warn("invalid token", (e as Error).message);
-      return fail(c, 401, "Your session has expired. Please sign in again.");
-    }
+
+  // Block cross-site form posts (CSRF): changes must come from our own pages
+  if (c.req.method !== "GET" && c.req.method !== "HEAD") {
+    const origin = c.req.header("origin");
+    if (origin && origin !== new URL(c.req.url).origin) return fail(c, 403, "Request blocked.");
+  }
+
+  const auth = await readSession(c.req.raw, c.env);
+  if (auth) {
+    c.set("auth", auth);
+    const user = await c.env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(auth.uid).first<UserRow>();
+    c.set("user", user ?? null);
   }
   await next();
+});
+
+// ---------- sign-in with Google ----------
+
+api.get("/auth/google/start", (c) => startGoogleLogin(c.req.raw, c.env));
+api.get("/auth/google/callback", (c) => finishGoogleLogin(c.req.raw, c.env));
+api.post("/auth/logout", async (c) => {
+  const clear = await endSession(c.req.raw, c.env);
+  return c.json({ ok: true }, 200, { "set-cookie": clear });
 });
 
 api.get("/health", (c) => c.json({ ok: true, time: now() }));
@@ -160,9 +170,10 @@ api.get("/me", (c) => {
   return c.json({
     signedIn: true,
     uid: auth.uid,
+    email: auth.email ?? null,
+    name: auth.name ?? null,
     username: user?.username ?? null,
     banned: !!user?.banned,
-    emailVerified: auth.emailVerified,
     isAdmin: isAdmin(c.env, auth.uid),
   });
 });
@@ -186,7 +197,7 @@ api.post("/me", async (c) => {
   return c.json({ ok: true, username });
 });
 
-/** Deletes everything the user created. The app then deletes the Firebase login itself. */
+/** Deletes the account and everything the user created, then signs them out. */
 api.delete("/me", async (c) => {
   const auth = c.get("auth");
   if (!auth) return fail(c, 401, "Please sign in first.");
@@ -220,8 +231,11 @@ api.delete("/me", async (c) => {
     db.prepare("DELETE FROM notifications WHERE user_id = ? OR actor_id = ?").bind(me, me),
     db.prepare("DELETE FROM posts WHERE user_id = ?").bind(me),
     db.prepare("DELETE FROM users WHERE id = ?").bind(me),
+    db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(me),
+    db.prepare("DELETE FROM identities WHERE user_id = ?").bind(me),
   ]);
-  return c.json({ ok: true });
+  const clear = await endSession(c.req.raw, c.env);
+  return c.json({ ok: true }, 200, { "set-cookie": clear });
 });
 
 // ---------- posts ----------
@@ -291,8 +305,6 @@ api.get("/posts/:id", async (c) => {
 api.post("/posts", async (c) => {
   const user = requireUser(c);
   if (user instanceof Response) return user;
-  const auth = c.get("auth")!;
-  if (!auth.emailVerified) return fail(c, 403, "Please verify your email address before broadcasting.", { code: "verify_email" });
 
   const db = c.env.DB;
   const recent = await db.prepare("SELECT COUNT(*) AS n FROM posts WHERE user_id = ? AND created_at > ?")
@@ -435,7 +447,6 @@ api.get("/posts/:id/comments", async (c) => {
 api.post("/posts/:id/comments", async (c) => {
   const user = requireUser(c);
   if (user instanceof Response) return user;
-  if (!c.get("auth")!.emailVerified) return fail(c, 403, "Please verify your email address first.", { code: "verify_email" });
   const id = c.req.param("id");
   const db = c.env.DB;
   const post = await db.prepare("SELECT user_id FROM posts WHERE id = ? AND status = 'live'").bind(id).first<{ user_id: string }>();

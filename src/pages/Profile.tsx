@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { EmailAuthProvider, GoogleAuthProvider, deleteUser, reauthenticateWithCredential, reauthenticateWithPopup } from "firebase/auth";
 import { Icon } from "../components/Icons";
 import { PostCard } from "../components/PostCard";
 import { api, ApiError, type Post } from "../lib/api";
@@ -16,7 +15,6 @@ export function Profile() {
   const [newName, setNewName] = useState(profile?.username ?? "");
   const [deleting, setDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState("");
-  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -30,8 +28,6 @@ export function Profile() {
   }, [user, navigate]);
 
   if (!user) return null;
-
-  const isPassword = user.providerData.some((p) => p.providerId === "password");
 
   const rename = async () => {
     try {
@@ -51,19 +47,12 @@ export function Profile() {
   const deleteAccount = async () => {
     setBusy(true);
     try {
-      // Firebase needs a fresh sign-in before an account can be deleted.
-      if (isPassword) {
-        await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? "", password));
-      } else {
-        await reauthenticateWithPopup(user, new GoogleAuthProvider());
-      }
       await api("/me", { method: "DELETE" });
-      await deleteUser(user);
+      await refresh();
       toast("success", "Your account and all your data have been deleted.");
       navigate("/", { replace: true });
     } catch (e) {
-      const code = (e as { code?: string }).code;
-      toast("error", "Couldn't delete account", code === "auth/invalid-credential" || code === "auth/wrong-password" ? "Password is incorrect." : (e as Error).message);
+      toast("error", "Couldn't delete account", (e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -130,18 +119,12 @@ export function Profile() {
           <button className="btn-danger" onClick={() => setDeleting(true)}><Icon name="trash" /> Delete my account</button>
         ) : (
           <div className="space-y-3">
-            {isPassword && (
-              <div>
-                <label htmlFor="del-pw" className="label">Your password</label>
-                <input id="del-pw" type="password" className="field" value={password} onChange={(e) => setPassword(e.target.value)} />
-              </div>
-            )}
             <div>
               <label htmlFor="del-confirm" className="label">Type DELETE to confirm</label>
               <input id="del-confirm" className="field" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} />
             </div>
             <div className="flex gap-2">
-              <button className="btn-danger" disabled={busy || confirmText !== "DELETE" || (isPassword && !password)} onClick={deleteAccount}>
+              <button className="btn-danger" disabled={busy || confirmText !== "DELETE"} onClick={deleteAccount}>
                 {busy && <Icon name="loader" />} Permanently delete
               </button>
               <button className="btn-secondary" onClick={() => setDeleting(false)}>Cancel</button>

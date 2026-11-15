@@ -11,7 +11,7 @@ This is a full rebuild of the Firebase Studio prototype as a real multi-user app
 | Prototype (Firebase Studio) | This version |
 |---|---|
 | Posts lived only in your browser's memory, so other people couldn't see them | Real database (Cloudflare D1): everyone sees the same live feed |
-| Login and sign-up screens only, with nothing behind them | Real accounts: Google sign-in and email + password, with email verification |
+| Login and sign-up screens only, with nothing behind them | Real accounts with "Continue with Google", sessions stored securely on Cloudflare (no Firebase) |
 | Images stored as text inside the page | Photos compressed on the phone and stored in Cloudflare R2 |
 | Messages with a "negative tone" were blocked, which also blocked useful alerts like "accident on the highway" | AI blocks *harmful* content (abuse, hate, scams, spam, private info) and lets bad *news* through |
 | Gemini key used in Genkit flows | Gemini is called only from the server, so the key never reaches users. Uses the new auth-key format |
@@ -25,7 +25,7 @@ This is a full rebuild of the Firebase Studio prototype as a real multi-user app
 | — | In-app account deletion, privacy policy, terms, guidelines (all required by Google Play) |
 | — | Installable app (PWA), offline shell, app icons and Play Store graphics |
 
-**Tech:** React + Tailwind (website) · Cloudflare Workers + Hono (API) · Cloudflare D1 (database) · Cloudflare R2 (photos) · Firebase Authentication (sign-in only) · Google Gemini (AI).
+**Tech:** React + Tailwind (website) · Cloudflare Workers + Hono (API) · Cloudflare D1 (database) · Cloudflare R2 (photos) · Sign in with Google · Google Gemini (AI).
 
 ---
 
@@ -33,7 +33,7 @@ This is a full rebuild of the Firebase Studio prototype as a real multi-user app
 
 - A computer with **Node.js 20 or newer** (download the LTS version from nodejs.org)
 - A free **Cloudflare** account (you'll also buy your domain there)
-- A free **Firebase** project (sign-in only). You can reuse the one Firebase Studio created
+- A free **Google Cloud** project (for the "Continue with Google" button)
 - A **Gemini API key** from Google AI Studio
 - For Android: a **Google Play developer account** (one-time US$25)
 
@@ -47,21 +47,19 @@ On Windows, run every command below in **PowerShell** inside the `echowave` fold
 npm install
 ```
 
-## Step 2: Firebase (sign-in)
+## Step 2: Google sign-in (no Firebase)
 
-1. Go to console.firebase.google.com and open your project, or click **Add project**.
-2. **Build → Authentication → Get started.** Under **Sign-in method**, enable **Google** and **Email/Password**.
-3. **Project settings (⚙️) → General → Your apps → Add app → Web (</>).** Name it "EchoWave web". You don't need Firebase Hosting.
-4. Copy `.env.example` to a new file named `.env` and fill it in from the config Firebase shows you:
-   ```
-   VITE_FIREBASE_API_KEY=...
-   VITE_FIREBASE_AUTH_DOMAIN=yourproject.firebaseapp.com
-   VITE_FIREBASE_PROJECT_ID=yourproject
-   VITE_FIREBASE_APP_ID=...
-   VITE_CONTACT_EMAIL=you@yourdomain.com
-   VITE_GRIEVANCE_OFFICER=Your Name
-   ```
-5. Open `wrangler.jsonc` and set `"FIREBASE_PROJECT_ID"` to the same project id.
+Sign-in is "Continue with Google", handled by the app itself on Cloudflare.
+
+1. Go to **console.cloud.google.com** → create a project called `echowave` (or pick one).
+2. **APIs & Services → OAuth consent screen** (or **Google Auth Platform → Branding**): app name `EchoWave`, your support email, app domain `echowaveai.com`, privacy policy `https://echowaveai.com/privacy`, terms `https://echowaveai.com/terms`. Audience: **External**. Then **Publish app** so anyone can sign in.
+3. **Clients → Create client** (or **Credentials → Create credentials → OAuth client ID**): type **Web application**.
+   - Authorized JavaScript origins: `https://echowaveai.com`
+   - Authorized redirect URIs: `https://echowaveai.com/api/auth/google/callback`
+4. Copy the **Client ID** into `wrangler.jsonc` → `"GOOGLE_CLIENT_ID"` (it is public).
+5. Put the **Client secret** in Cloudflare → Workers & Pages → echowave → Settings → Variables and Secrets → Add → Type **Secret**, name `GOOGLE_CLIENT_SECRET`.
+
+For local testing also add `http://localhost:5173` as an origin and `http://localhost:5173/api/auth/google/callback` as a redirect URI, and put `APP_ORIGIN=http://localhost:5173`, `GOOGLE_CLIENT_SECRET=...` in `.dev.vars`.
 
 ## Step 3: Gemini API key
 
@@ -114,13 +112,12 @@ The last command prints a URL like `https://echowave.yourname.workers.dev`. Your
 1. **Check the name first.** Search the Play Store and the web for "EchoWave" so you don't pick a name someone else already uses. Change it now if needed, because renaming later is painful.
 2. Cloudflare dashboard → **Domain Registration → Register Domains**. Buy your domain, e.g. `echowave.app` or `getechowave.com`. Cloudflare sells domains at cost.
 3. **Workers & Pages → echowave → Settings → Domains & Routes → Add → Custom domain** → type your domain. Cloudflare sets up HTTPS automatically.
-4. **Important:** in Firebase → **Authentication → Settings → Authorized domains → Add domain**, add your domain. Without this, sign-in fails on your site.
-5. Update `VITE_CONTACT_EMAIL` in `.env` if needed and run `npm run deploy`.
+4. Set `"APP_ORIGIN"` in `wrangler.jsonc` to your domain and make sure the same domain is in your Google OAuth client (step 2).
 
 ## Step 7: Make yourself the admin
 
 1. Sign up on your live site and pick a username.
-2. Firebase console → **Authentication → Users**. Copy your **User UID**.
+2. In Cloudflare → Storage & Databases → D1 → echowave → Console, run `SELECT user_id, email FROM identities;` and copy your `user_id` (looks like `google:1234…`).
 3. In `wrangler.jsonc`, set `"ADMIN_UIDS": "your-uid"` (separate several with commas) and run `npm run deploy`.
 4. A 🛡 shield icon now appears in the header. It opens the moderation queue (reported, auto-hidden and unchecked posts) where you can keep, remove or ban.
 
@@ -164,12 +161,12 @@ Limits like characters per post (280) and posts per hour (5) are at the top of `
 - **Cloudflare Workers, D1, R2:** free tiers cover an early-stage app.
 - **Domain:** yearly fee, depending on the ending (.com, .app, .in…).
 - **Gemini:** charged per request (one call per post or comment, one per trending summary, cached for 10 minutes). Flash models are among the cheapest; check current prices at ai.google.dev/pricing and keep the budget alert from step 3.
-- **Firebase Authentication:** free for email and Google sign-in at this scale.
+- **Google sign-in:** free.
 - **Google Play:** US$25 once.
 
 ## If something goes wrong
 
-- **"This website isn't authorised in Firebase"**: add your domain in Firebase → Authentication → Authorized domains (step 6.4).
+- **Google says "redirect_uri_mismatch"**: the redirect URI in your Google OAuth client must be exactly `https://echowaveai.com/api/auth/google/callback`.
 - **Posts go through but without topics or the Urgent badge**: the Gemini key is missing or wrong. Run `npx wrangler secret put GEMINI_API_KEY` again. Posts made while AI was down show in the admin queue as "AI check skipped".
 - **See live errors:** `npx wrangler tail`, or Cloudflare dashboard → Workers → echowave → Logs.
 - **Address bar visible in the Android app**: the SHA-256 fingerprints in step 8.3 or 8.5 are missing or wrong.

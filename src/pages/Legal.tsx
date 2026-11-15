@@ -47,7 +47,7 @@ export function Privacy() {
       <p>This policy explains what EchoWave ("we") collects, why, and your choices. Contact: <a href={`mailto:${CONTACT}`}>{CONTACT}</a>.</p>
       <h2>What we collect</h2>
       <ul>
-        <li><strong>Account:</strong> your email address and sign-in details (handled by Google Firebase Authentication), and the username you choose.</li>
+        <li><strong>Account:</strong> your name and email address from Google when you use “Continue with Google” (we never see your Google password), and the username you choose.</li>
         <li><strong>Content you post:</strong> broadcasts, photos, comments, likes and reports.</li>
         <li><strong>Approximate location — only if you choose:</strong> when you tap “Use current location” or “Near me”. Broadcast locations are rounded to about 1 km before being stored; we never store your exact position. Other users only see an approximate distance.</li>
         <li><strong>Technical data:</strong> basic logs (such as IP address and device type) kept by our hosting provider for security and abuse prevention.</li>
@@ -61,7 +61,7 @@ export function Privacy() {
       <h2>Who processes it</h2>
       <ul>
         <li>Cloudflare (hosting, database, photo storage)</li>
-        <li>Google Firebase (sign-in) and Google Gemini API (content moderation)</li>
+        <li>Google (Sign in with Google) and Google Gemini API (content moderation)</li>
       </ul>
       <h2>How long we keep it</h2>
       <ul>

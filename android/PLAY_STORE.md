@@ -47,7 +47,7 @@ EchoWave is not an emergency service. In an emergency, call 112.
 
 ## Data safety form
 
-**Does your app collect or share user data?** Yes, collects. Data is **not shared** with third parties (Cloudflare, Firebase and Gemini act as service providers, which doesn't count as sharing).
+**Does your app collect or share user data?** Yes, collects. Data is **not shared** with third parties (Cloudflare and Google act as service providers, which doesn't count as sharing).
 **Encrypted in transit?** Yes. **Can users request deletion?** Yes.
 
 | Data type | Collected | Optional? | Purpose |

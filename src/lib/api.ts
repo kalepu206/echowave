@@ -1,5 +1,3 @@
-import { auth } from "./firebase";
-
 export interface Post {
   id: string;
   userId: string;
@@ -55,14 +53,12 @@ export class ApiError extends Error {
 
 export async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  const user = auth.currentUser;
-  if (user) headers.set("authorization", `Bearer ${await user.getIdToken()}`);
   if (init.body && !(init.body instanceof FormData) && !headers.has("content-type")) {
     headers.set("content-type", "application/json");
   }
   let res: Response;
   try {
-    res = await fetch(`/api${path}`, { ...init, headers });
+    res = await fetch(`/api${path}`, { ...init, headers, credentials: "same-origin" });
   } catch {
     throw new ApiError("You seem to be offline. Check your connection and try again.", 0);
   }

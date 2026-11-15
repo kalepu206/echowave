@@ -4,7 +4,9 @@ export interface Env {
   ASSETS: Fetcher;
   GEMINI_API_KEY: string;
   GEMINI_MODEL: string;
-  FIREBASE_PROJECT_ID: string;
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
+  APP_ORIGIN: string;
   ADMIN_UIDS: string;
   POST_TTL_HOURS: string;
   REPORT_HIDE_THRESHOLD: string;
@@ -15,7 +17,7 @@ export interface Env {
 export interface AuthInfo {
   uid: string;
   email?: string;
-  emailVerified: boolean;
+  name?: string;
 }
 
 export interface UserRow {

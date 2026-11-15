@@ -37,8 +37,10 @@
   ],
 
   "vars": {
-    // Firebase project id (Firebase console > Project settings)
-    "FIREBASE_PROJECT_ID": "REPLACE_ME",
+    // Google sign-in: OAuth client ID from Google Cloud Console (public, not a secret)
+    "GOOGLE_CLIENT_ID": "",
+    // Main address of the site; Google sends people back here after login
+    "APP_ORIGIN": "https://echowaveai.com",
     // Comma-separated Firebase user ids that can use /admin
     "ADMIN_UIDS": "",
     // Gemini model used for moderation, tagging and summaries
@@ -57,5 +59,6 @@
 
   "observability": { "enabled": true }
 
-  // Secret (never put in this file): npx wrangler secret put GEMINI_API_KEY
+  // Secrets (never put in this file): add in Cloudflare dashboard > echowave > Settings > Variables and Secrets
+  //   GEMINI_API_KEY, GOOGLE_CLIENT_SECRET
 }
