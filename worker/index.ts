@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono";
 import { verifyFirebaseToken } from "./auth";
 import { moderate, heuristicCheck, summarizeTrending, arrayBufferToBase64 } from "./ai";
 import type { AppEnv, Env, PostRow, UserRow } from "./types";
+import { SCHEMA } from "./schema";
 
 const CONTENT_LIMIT = 280;
 const COMMENT_LIMIT = 200;
@@ -114,9 +115,23 @@ async function notify(env: Env, to: string, type: string, postId: string | null,
   ).bind(uid(), to, type, postId, actor, now()).run();
 }
 
+// ---------- database setup (runs once per server start; CREATE ... IF NOT EXISTS is safe to repeat) ----------
+
+let schemaReady: Promise<unknown> | null = null;
+function ensureSchema(env: Env) {
+  if (!schemaReady) {
+    schemaReady = env.DB.batch(SCHEMA.map((s) => env.DB.prepare(s))).catch((e) => {
+      schemaReady = null;
+      throw e;
+    });
+  }
+  return schemaReady;
+}
+
 // ---------- auth middleware ----------
 
 api.use("*", async (c, next) => {
+  await ensureSchema(c.env);
   c.set("auth", null);
   c.set("user", null);
   const header = c.req.header("authorization");
@@ -683,6 +698,7 @@ export default {
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(
       (async () => {
+        await ensureSchema(env);
         const graceMs = 24 * HOUR; // keep a day after expiry for reports/appeals
         const expired = await env.DB.prepare("SELECT id, image_key FROM posts WHERE expires_at < ? LIMIT 500")
           .bind(Date.now() - graceMs).all<{ id: string; image_key: string | null }>();
