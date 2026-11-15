@@ -6,6 +6,12 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-11-01",
 
+  // Your domain (must be active in this Cloudflare account)
+  "routes": [
+    { "pattern": "echowaveai.com", "custom_domain": true },
+    { "pattern": "www.echowaveai.com", "custom_domain": true }
+  ],
+
   // The React app (built into ./dist) is served as static files.
   // /api/* and /.well-known/* go to the Worker first.
   "assets": {
