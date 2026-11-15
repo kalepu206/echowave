@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "wrangler dev --port 8787",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "deploy": "npm run build && wrangler deploy",
     "db:migrate": "wrangler d1 migrations apply echowave --remote",
     "db:migrate:local": "wrangler d1 migrations apply echowave --local",
